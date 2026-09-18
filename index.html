@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eesti Kaitseväe maaväe auastmed – pildimäng</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f3f3f1;margin:0;color:#222}.wrap{max-width:1050px;margin:auto;padding:24px}.card{background:white;border-radius:16px;padding:24px;box-shadow:0 4px 18px #0001}.top{display:flex;justify-content:space-between;gap:20px;align-items:center}.small{color:#666}.q{font-size:30px;font-weight:700;margin:20px 0}.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.opt{border:2px solid #ddd;background:#fff;border-radius:14px;padding:16px;cursor:pointer;min-height:230px;display:flex;align-items:center;justify-content:center;transition:.15s}.opt:hover{border-color:#555;transform:translateY(-2px)}.opt.correct{border-color:#16833b;background:#eefaf2}.opt.wrong{border-color:#b42318;background:#fff1f0}.rankpic{width:180px;height:195px;background-repeat:no-repeat;background-color:#fff;border:1px solid #ddd}.msg{min-height:28px;font-weight:700;margin-top:16px}.controls{display:flex;gap:10px;margin-top:18px}.btn{border:0;border-radius:10px;padding:11px 17px;background:#222;color:white;cursor:pointer}.btn:disabled{opacity:.4}.score{font-size:18px}.source{font-size:12px;color:#777;margin-top:20px}.source a{color:#555}.hidden{display:none}@media(max-width:650px){.opts{grid-template-columns:1fr}.q{font-size:24px}}
+</style>
+</head>
+<body><div class="wrap"><div class="card">
+<div class="top"><div><h1>Maaväe auastmete pildimäng</h1><div class="small">Vali etteantud auastme juurde õige eraldusmärk.</div></div><div class="score" id="score">Õigeid: 0 / 0</div></div>
+<div class="q" id="question"></div><div class="opts" id="options"></div><div class="msg" id="msg"></div>
+<div class="controls"><button class="btn" id="next" disabled>Järgmine</button><button class="btn" id="restart">Alusta uuesti</button></div>
+<div class="source">Auastmete kujutised pärinevad Eesti Kaitseväe maaväe auastmete õppematerjalist Opiqis. Mäng kasutab neid pilte otse veebiallikast, seega esimene laadimine vajab internetiühendust.</div>
+</div></div>
+<script>
+const S='https://astrablobs.blob.core.windows.net/kitcontent/6df87a92-6966-4baa-99fe-d5c2cbd2ce9d/a9152744-6e0b-4285-a2f0-dea200077bb7/e0bd7548-c86a-4189-a5ad-4e8d59c856ac_m.png';
+const N='https://astrablobs.blob.core.windows.net/kitcontent/6df87a92-6966-4baa-99fe-d5c2cbd2ce9d/daf5694b-be66-41eb-be00-77d33847d73f/bffe889c-f00d-477f-ab49-197465c4639f_m.png';
+const O='https://astrablobs.blob.core.windows.net/kitcontent/6df87a92-6966-4baa-99fe-d5c2cbd2ce9d/e45f01aa-f182-49bc-9ed7-8fb502327954/0ad5b4e7-dd64-4705-bb53-cb4b84b6362d_m.png';
+// Crop definitions are based on the three source sheets (800px wide). Each crop shows the insignia area only.
+const ranks=[
+{name:'reamees',img:S,x:152,y:45,w:235,h:265}, {name:'kapral',img:S,x:388,y:45,w:235,h:265},
+{name:'nooremveebel',img:N,x:78,y:20,w:129,h:170},{name:'veebel',img:N,x:207,y:20,w:129,h:170},{name:'vanemveebel',img:N,x:336,y:20,w:129,h:170},{name:'staabiveebel',img:N,x:465,y:20,w:129,h:170},{name:'ülemveebel',img:N,x:594,y:20,w:130,h:170},
+{name:'nooremseersant',img:N,x:78,y:253,w:129,h:145},{name:'seersant',img:N,x:207,y:253,w:129,h:145},{name:'vanemseersant',img:N,x:336,y:253,w:129,h:145},
+{name:'brigaadikindral',img:O,x:173,y:10,w:102,h:110},{name:'kindralmajor',img:O,x:275,y:10,w:102,h:110},{name:'kindralleitnant',img:O,x:378,y:10,w:102,h:110},{name:'kindral',img:O,x:480,y:10,w:103,h:110},
+{name:'major',img:O,x:226,y:164,w:103,h:100},{name:'kolonelleitnant',img:O,x:328,y:164,w:103,h:100},{name:'kolonel',img:O,x:431,y:164,w:103,h:100},
+{name:'lipnik',img:O,x:165,y:305,w:105,h:110},{name:'nooremleitnant',img:O,x:270,y:305,w:105,h:110},{name:'leitnant',img:O,x:375,y:305,w:105,h:110},{name:'kapten',img:O,x:480,y:305,w:107,h:110}
+];
+let current=null, answered=false, right=0,total=0;
+function shuffled(a){return [...a].sort(()=>Math.random()-.5)}
+function stylePic(el,r){
+  const scale=Math.min(180/r.w,195/r.h); el.style.backgroundImage=`url("${r.img}")`; el.style.backgroundSize=`${800*scale}px auto`; el.style.backgroundPosition=`-${r.x*scale}px -${r.y*scale}px`;
+}
+function newQ(){
+ answered=false; document.getElementById('next').disabled=true; document.getElementById('msg').textContent='';
+ current=ranks[Math.floor(Math.random()*ranks.length)]; document.getElementById('question').textContent=current.name;
+ const choices=shuffled([current,...shuffled(ranks.filter(r=>r!==current)).slice(0,3)]);
+ const box=document.getElementById('options'); box.innerHTML='';
+ choices.forEach(r=>{const b=document.createElement('button');b.className='opt';b.dataset.rank=r.name;const p=document.createElement('div');p.className='rankpic';stylePic(p,r);b.appendChild(p);b.onclick=()=>answer(b,r);box.appendChild(b)});
+}
+function answer(btn,r){if(answered)return;answered=true;total++;const buttons=[...document.querySelectorAll('.opt')];buttons.forEach(b=>b.disabled=true);if(r.name===current.name){right++;btn.classList.add('correct');document.getElementById('msg').textContent='Õige!';}else{btn.classList.add('wrong');buttons.find(b=>b.dataset.rank===current.name).classList.add('correct');document.getElementById('msg').textContent='Vale. Õige vastus on näidatud roheliselt.';}document.getElementById('score').textContent=`Õigeid: ${right} / ${total}`;document.getElementById('next').disabled=false;}
+document.getElementById('next').onclick=newQ;document.getElementById('restart').onclick=()=>{right=0;total=0;document.getElementById('score').textContent='Õigeid: 0 / 0';newQ()};newQ();
+</script></body></html>
